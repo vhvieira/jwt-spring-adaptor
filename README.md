@@ -1,7 +1,15 @@
 # jwt-spring-adaptor
 Adaptor to easily implement JWT security, using internal and external authentication (including LDAP) on any SpringBoot project.
 
-### How to use the jwt-spring-adaptor
+## Table of Contents
+
+1. [How to use the jwt-spring-adaptor](#how-to-use-the-jwt-spring-adaptor)
+2. [Dependencies Required](#dependencies-required)
+3. [How to create a security configuration](#how-to-create-a-security-configuration)
+4. [Understanding the Base Classes](#understanding-the-base-classes)
+5. [JWT Spring Adaptor implementation example](#jwt-spring-adaptor-implementation-example)
+
+## How to use the jwt-spring-adaptor
 The component that was create in the POC as security-core should be named as jwt-adapter.
 It should be used as a abstraction for JWT implementation easily, not requiring complex configuration. 
 
