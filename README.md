@@ -29,10 +29,10 @@ It should be used as a abstraction for JWT implementation easily, not requiring 
 <dependency>
     <groupId>org.springframework.security</groupId>
     <artifactId>spring-security-ldap</artifactId>
-</dependency> <br>
+</dependency>
 ```
 
-##How to create a security configuration
+## How to create a security configuration
 
 Like any other SpringBoot application you need to create a configuration class and extend from WebSecurityConfigurerAdapter. <br>
 But instead of creating the whole configuration on your own, all you need to do is create this class, and inside this class using inner class extending from the jwt-adaptor base classes and provide the configuration you want, as in the example:
@@ -82,7 +82,7 @@ public class ExampleJWTAdaptorConfiguration extends WebSecurityConfigurerAdapter
 ```
 
 
-##Understanding the Base Classes:
+## Understanding the Base Classes:
 
 This initial version of jwt-adaptor contains 3 base classes do be used in our project:
 
