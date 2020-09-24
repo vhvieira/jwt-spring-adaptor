@@ -1,4 +1,4 @@
-## jwt-spring-adaptor
+# jwt-spring-adaptor
 Adaptor to easily implement JWT security, using internal and external authentication (including LDAP) on any SpringBoot project.
 
 ### How to use the jwt-spring-adaptor
@@ -7,7 +7,7 @@ It should be used as a abstraction for JWT implementation easily, not requiring 
 
 
 
-### Dependencies required:
+## Dependencies required:
 
 ```xml
 <dependency>
@@ -32,7 +32,7 @@ It should be used as a abstraction for JWT implementation easily, not requiring 
 </dependency> <br>
 ```
 
-###How to create a security configuration
+##How to create a security configuration
 
 Like any other SpringBoot application you need to create a configuration class and extend from WebSecurityConfigurerAdapter. <br>
 But instead of creating the whole configuration on your own, all you need to do is create this class, and inside this class using inner class extending from the jwt-adaptor base classes and provide the configuration you want, as in the example:
@@ -81,7 +81,8 @@ public class ExampleJWTAdaptorConfiguration extends WebSecurityConfigurerAdapter
 }
 ```
 
-###Understanding the Base Classes:
+
+##Understanding the Base Classes:
 
 This initial version of jwt-adaptor contains 3 base classes do be used in our project:
 
@@ -92,3 +93,7 @@ This initial version of jwt-adaptor contains 3 base classes do be used in our pr
 
 
 - **ExternalJWTSecurityAdapter** This is the adapter class that will secure all your endpoints if you want use external JWT in your applications. This adaptor contains the logic to secure the endpoints with a common pattern in their URL and validates the token using an external URL that should be private, so only users that have access to that external application will have access to your applications and you can map different external application to different user roles, for more details on how to configure the ExternalJWTSecurityAdapter please go the specific session.
+
+## JWT Spring Adaptor implementation example
+Please referer to this project for a working implementation of JWT using JWT Spring Adaptor.
+[Example project](https://github.com/vhvieira/jwt-spring-adaptor-example)
