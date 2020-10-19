@@ -2,6 +2,7 @@ package br.com.alphatecti.security.jwt.filter;
 
 import static br.com.alphatecti.security.jwt.util.HttpHeadersConstants.HEADER_STRING;
 import static br.com.alphatecti.security.jwt.util.HttpHeadersConstants.JWT_TOKEN_PREFIX;
+import static br.com.alphatecti.security.jwt.util.HttpHeadersConstants.OPTIONS_METHOD;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletRequest;
@@ -39,8 +40,8 @@ public abstract class AbstractJWTProcessingFilter extends GenericFilterBean impl
             HttpServletRequest servletRequest = (HttpServletRequest) request;
             String requestURI = servletRequest.getRequestURI();
             log.debug("AbstractJWTProcessingFilter.doFilter received requestURI: " + requestURI + " and urlFilter: " + urlFilter);
-            // validates URL is configured to the filter
-            if (requestURI != null && requestURI.contains(urlFilter)) {
+            // validates URL is configured to the filter, if options method, then ignore
+            if ( !OPTIONS_METHOD.equalsIgnoreCase(servletRequest.getMethod()) && requestURI != null && requestURI.contains(urlFilter) ) {
                 // now it should validate the token, otherwise should fail the authentication
                 String authorizationHeader = servletRequest.getHeader(HEADER_STRING);
                 // if authorization header is empty, then exception
@@ -54,15 +55,16 @@ public abstract class AbstractJWTProcessingFilter extends GenericFilterBean impl
                     if (authentication != null) {
                         SecurityContextHolder.getContext().setAuthentication(authentication);
                     } else {
-                        log.debug("JWT token was ignored by the JWTProcessingFilter, processing other filters");
-                        filterChain.doFilter(request, response);
+                        log.debug("JWT token was ignored by the JWTProcessingFilter.");
                     }
+                    //continue chain to process request
+                    filterChain.doFilter(request, response);
                 } else {
                     throw new BadCredentialsException("JWT authentication failed, header doesn't contain a JWT token.");
                 }
 
             } else {
-                log.debug("AbstractJWTProcessingFilter.doFilter url not in the filter pattern, JWT filter ignored"); 
+                log.debug("AbstractJWTProcessingFilter.doFilter url not in the filter pattern, JWT filter ignored");
                 filterChain.doFilter(request, response);
             }
         } catch (Exception ex) {

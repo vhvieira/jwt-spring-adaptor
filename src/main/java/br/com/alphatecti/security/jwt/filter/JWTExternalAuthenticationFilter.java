@@ -15,10 +15,10 @@ import org.apache.http.HttpHost;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
+import org.apache.http.conn.ssl.TrustStrategy;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.DefaultProxyRoutePlanner;
-import org.apache.http.ssl.TrustStrategy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Bean;
@@ -34,14 +34,14 @@ import org.springframework.web.client.RestTemplate;
 
 import br.com.alphatecti.security.base.config.ExternalJWTConfiguration;
 import br.com.alphatecti.security.base.util.SecurityUtils;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Authenticates a token using an external service
  * 
  * @author vhrodriguesv
  */
-@Log4j2
+@Slf4j
 public class JWTExternalAuthenticationFilter extends AbstractJWTProcessingFilter {
 
     /*
@@ -77,16 +77,11 @@ public class JWTExternalAuthenticationFilter extends AbstractJWTProcessingFilter
                     log.debug("Using cache to validate external token");
                     return (Authentication) cacheManager.getCache(CACHE_NAME).get(jwtToken).get();
                 } else {
-                    RestTemplate restTemplate = getRestTemplate(configuration.getProxyServer(), configuration.getProxyPort());
-                    log.debug("RestTemplate created:  " + restTemplate);
-                    HttpHeaders headers = new HttpHeaders();
-                    headers.add(HEADER_STRING, JWT_TOKEN_PREFIX + " " + jwtToken);
-                    HttpEntity<String> entity = new HttpEntity<String>("parameters", headers);
-                    log.debug("HttpHeaders created:  " + headers);
-                    ResponseEntity<String> externalResponse = restTemplate.exchange(configuration.getExternalURL(), HttpMethod.GET, entity,
-                            String.class);
-                    log.debug("Response code was:  " + externalResponse.getStatusCodeValue());
+                    ResponseEntity<String> externalResponse = callExternalURL(jwtToken, configuration.getExternalURL());
+                    
+                    //after follow all redirects it should be 200
                     if (externalResponse.getStatusCodeValue() != 200) {
+                        // check if it was redirected to login page
                         throw new BadCredentialsException("External system authentication failed, external url didn't replied with HTTP200.");
                     }
 
@@ -94,6 +89,7 @@ public class JWTExternalAuthenticationFilter extends AbstractJWTProcessingFilter
                     UsernamePasswordAuthenticationToken userAuthenticated = new UsernamePasswordAuthenticationToken(configuration.getTokenSubject(),
                             null, SecurityUtils.getUpdatedAuthorites(configuration.getDefaultPermissions()));
                     cacheManager.getCache(CACHE_NAME).put(jwtToken, userAuthenticated);
+                    
                     return userAuthenticated;
                 }
             } catch (Exception ex) {
@@ -102,26 +98,65 @@ public class JWTExternalAuthenticationFilter extends AbstractJWTProcessingFilter
             }
         } else {
             // should be ignored, not external token
+            log.debug("Not an external token, ignoring it.");
             return null;
         }
     }
 
+    /**
+     * Calls the external URL using the provided bearer token
+     */
+    private ResponseEntity<String> callExternalURL(String jwtToken, String url) throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
+        RestTemplate restTemplate = getRestTemplate(configuration.getProxyServer(), configuration.getProxyPort());
+        log.debug("RestTemplate created:  " + restTemplate);
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HEADER_STRING, JWT_TOKEN_PREFIX + " " + jwtToken);
+        HttpEntity<String> entity = new HttpEntity<String>("parameters", headers);
+        log.debug("HttpHeaders created:  " + headers);
+        ResponseEntity<String> externalResponse = restTemplate.exchange(url, HttpMethod.GET, entity,
+                String.class);
+        log.debug("Response code was:  " + externalResponse.getStatusCodeValue());
+        return externalResponse;
+    }
+
+    /**
+     * Get custom restTemplate with no redirects support and accepting any hosts in the certificate.
+     */
     @Bean
-    public RestTemplate getRestTemplate(String proxyHost, int proxyPort) throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
+    private RestTemplate getRestTemplate(String proxyHost, int proxyPort) {
+        CloseableHttpClient httpClient;
+        try {
+            httpClient = getHttpClient(proxyHost, proxyPort);
+            HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory();
+            requestFactory.setHttpClient(httpClient);
+            RestTemplate restTemplate = new RestTemplate(requestFactory);
+            return restTemplate;
+        } catch (Exception ex) {
+            log.debug("Error initializing custom rest template on external JWT Auth", ex);
+            throw new BadCredentialsException("External system authentication failed", ex);
+        }
+       
+    }
+
+    /**
+     * Return the custom http client that has a self signed strategy and can support proxy + no redirects.
+     * 
+     * @throws KeyStoreException
+     * @throws NoSuchAlgorithmException
+     * @throws KeyManagementException
+     */
+    private CloseableHttpClient getHttpClient(String proxyHost, int proxyPort)
+            throws KeyManagementException, NoSuchAlgorithmException, KeyStoreException {
         TrustStrategy acceptingTrustStrategy = new TrustSelfSignedStrategy();
         SSLContext sslContext = org.apache.http.ssl.SSLContexts.custom().loadTrustMaterial(null, acceptingTrustStrategy).build();
         SSLConnectionSocketFactory csf = new SSLConnectionSocketFactory(sslContext, NoopHostnameVerifier.INSTANCE);
-        CloseableHttpClient httpClient = HttpClients.custom().setSSLSocketFactory(csf).disableRedirectHandling().build();
-
-        HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory();
         if (null != proxyHost && proxyPort > 0) {
             log.info("PROXY CONFIGURED | proxyHost=" + proxyHost + " | proxyPort=" + proxyPort);
             HttpHost proxy = new HttpHost(proxyHost, proxyPort, Proxy.Type.HTTP.name());
-            httpClient = HttpClients.custom().setSSLSocketFactory(csf).setRoutePlanner(new DefaultProxyRoutePlanner(proxy)).build();
+            return HttpClients.custom().setSSLSocketFactory(csf).setRoutePlanner(new DefaultProxyRoutePlanner(proxy)).disableRedirectHandling().build();
         }
-        requestFactory.setHttpClient(httpClient);
-        RestTemplate restTemplate = new RestTemplate(requestFactory);
-        return restTemplate;
+        // create custom client
+        return  HttpClients.custom().setSSLSocketFactory(csf).disableRedirectHandling().build();
     }
 
 }

@@ -10,4 +10,5 @@ public class HttpHeadersConstants {
     public static final String HEADER_STRING = "Authorization";
     public static final String BASIC_TOKEN_PREFIX = "Basic";
     public static final String BASIC_SPLIT_STRING = ":";
+    public static final String OPTIONS_METHOD = "OPTIONS";
 }

@@ -4,11 +4,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import javax.servlet.Filter;
+
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.filter.CorsFilter;
 
 import br.com.alphatecti.security.base.AccountCredentials;
 import br.com.alphatecti.security.base.BaseTokenWebSecurityConfigurerAdapter;
@@ -24,7 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public abstract class BaseBasicAuthToInternalJWTConfig extends BaseTokenWebSecurityConfigurerAdapter {
 
-    private Set<AccountCredentials> inMemoryCredentials = new HashSet<AccountCredentials>();
+    private Set<br.com.alphatecti.security.base.AccountCredentials> inMemoryCredentials = new HashSet<AccountCredentials>();
 
     /*
      * Configuration
@@ -72,9 +74,17 @@ public abstract class BaseBasicAuthToInternalJWTConfig extends BaseTokenWebSecur
         try {
             // transform in ant matcher by adding ** in the end
             String urlPattern = urlFilter + "**";
-            httpSecurity.httpBasic().and().authorizeRequests().antMatchers(urlPattern).authenticated().and().addFilterBefore(
-                    new BasicAuthToJWTAuthenticationFilter(urlPattern, authenticationManager(), tokenParser()),
-                    UsernamePasswordAuthenticationFilter.class);
+            // filter to be used
+            Filter filter = new BasicAuthToJWTAuthenticationFilter(urlPattern, authenticationManager(), tokenParser());
+            // bridge configuration and CORS
+            httpSecurity.csrf().disable();
+            httpSecurity.cors();
+            //BLACKLIST configuration: to allow all if filter doesn't deny
+            httpSecurity.addFilterAfter(filter, CorsFilter.class).authorizeRequests().anyRequest().permitAll();
+            //WHITELIST configuration (allow only if filter authenticate)
+            //httpSecurity.httpBasic().and().authorizeRequests().antMatchers(urlPattern).authenticated()
+            //.and().addFilterBefore(filter, CorsFilter.class);
+            httpSecurity.headers().cacheControl();
         } catch (Exception ex) {
             log.error("ERROR Initilizaling BaseBasicAuthToInternalJWTConfig and BasicAuthToJWTAuthenticationFilter", ex);
             throw ex;

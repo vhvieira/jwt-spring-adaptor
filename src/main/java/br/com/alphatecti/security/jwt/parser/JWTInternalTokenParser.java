@@ -1,6 +1,6 @@
 package br.com.alphatecti.security.jwt.parser;
 
-import static br.com.alphatecti.security.jwt.util.HttpHeadersConstants.*;
+import static br.com.alphatecti.security.jwt.util.HttpHeadersConstants.JWT_TOKEN_INTERNAL_TYPE;
 
 import java.util.Date;
 

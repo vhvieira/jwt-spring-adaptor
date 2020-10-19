@@ -1,10 +1,11 @@
 package br.com.alphatecti.security.base.config;
 
+import javax.servlet.Filter;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.filter.CorsFilter;
 
 import br.com.alphatecti.security.base.BaseTokenWebSecurityConfigurerAdapter;
 import br.com.alphatecti.security.jwt.filter.JWTInternalAuthenticationFilter;
@@ -37,12 +38,18 @@ public abstract class BaseInternalJWTConfig extends BaseTokenWebSecurityConfigur
     protected void configure(HttpSecurity httpSecurity) throws Exception {
         if (!wasInitilized) {
             wasInitilized = true;
-            httpSecurity.csrf().disable().exceptionHandling().authenticationEntryPoint(unauthorizedHandler()).and().sessionManagement()
-                    .sessionCreationPolicy(SessionCreationPolicy.STATELESS).and().authorizeRequests().antMatchers(configuration.getUrlFilter())
-                    .permitAll().anyRequest().authenticated();
-
-            httpSecurity.addFilterBefore(authenticationTokenFilterBean(), UsernamePasswordAuthenticationFilter.class);
-            httpSecurity.headers().cacheControl();
+            // filter to be used
+            Filter filter = authenticationTokenFilterBean();
+            httpSecurity.csrf().disable();
+            httpSecurity.cors();
+            // BLACKLIST config (allow access to all, unless a filter blocks it)
+            httpSecurity.addFilterAfter(filter, CorsFilter.class).authorizeRequests().anyRequest().permitAll();
+            // WHITELIST config (only allows access if authentication occurs) - Need to re-test with Widgets
+            //httpSecurity.csrf().disable().exceptionHandling().authenticationEntryPoint(unauthorizedHandler()).and().sessionManagement()
+            //        .sessionCreationPolicy(SessionCreationPolicy.STATELESS).and().authorizeRequests().antMatchers(configuration.getUrlFilter())
+            //        .permitAll().anyRequest().authenticated();
+            //httpSecurity.addFilterBefore(filter, CorsFilter.class);
+            //httpSecurity.headers().cacheControl();
         }
     }
 

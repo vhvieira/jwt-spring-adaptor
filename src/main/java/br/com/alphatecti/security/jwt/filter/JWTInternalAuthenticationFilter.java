@@ -11,12 +11,14 @@ import org.springframework.security.core.Authentication;
 import br.com.alphatecti.security.base.config.InternalJWTConfiguration;
 import br.com.alphatecti.security.base.util.SecurityUtils;
 import br.com.alphatecti.security.jwt.parser.JWTTokenParser;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Authenticates a token using an internal token
  * 
  * @author vhrodriguesv
  */
+@Slf4j
 public class JWTInternalAuthenticationFilter extends AbstractJWTProcessingFilter {
     
     
@@ -51,11 +53,13 @@ public class JWTInternalAuthenticationFilter extends AbstractJWTProcessingFilter
     public Authentication authenticateJWTToken(String jwtToken) {
         //validates it is internal token
         if (jwtToken.startsWith(JWT_TOKEN_INTERNAL_TYPE)) {
+            log.debug("Will validate using internal token: " + jwtToken);
             //uses cache first
             if(cacheManager.getCache(CACHE_NAME).get(jwtToken) != null) {
                 return (Authentication) cacheManager.getCache(CACHE_NAME).get(jwtToken).get();
             } else {
                 String subject = tokenParser.parseJWTToken(jwtToken);
+                log.debug("Internal token subject: " + subject);
                 if (subject != null) {
                     UsernamePasswordAuthenticationToken userAuthenticated = new UsernamePasswordAuthenticationToken(subject, null, SecurityUtils.getUpdatedAuthorites(configuration.getDefaultPermissions()));
                     cacheManager.getCache(CACHE_NAME).put(jwtToken, userAuthenticated);
@@ -65,7 +69,7 @@ public class JWTInternalAuthenticationFilter extends AbstractJWTProcessingFilter
                 }
             }
          } else {
-            //should be ignored, not internal token
+            log.debug("Not an internal token, ignoring it.");
             return null;
         }
     }

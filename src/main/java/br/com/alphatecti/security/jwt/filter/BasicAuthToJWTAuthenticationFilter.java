@@ -1,6 +1,9 @@
 package br.com.alphatecti.security.jwt.filter;
 
-import static br.com.alphatecti.security.jwt.util.HttpHeadersConstants.*;
+import static br.com.alphatecti.security.jwt.util.HttpHeadersConstants.BASIC_SPLIT_STRING;
+import static br.com.alphatecti.security.jwt.util.HttpHeadersConstants.BASIC_TOKEN_PREFIX;
+import static br.com.alphatecti.security.jwt.util.HttpHeadersConstants.HEADER_STRING;
+import static br.com.alphatecti.security.jwt.util.HttpHeadersConstants.JWT_TOKEN_PREFIX;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -55,6 +58,8 @@ public class BasicAuthToJWTAuthenticationFilter extends AbstractAuthenticationPr
             throws IOException, ServletException {
         response.addHeader(HEADER_STRING, JWT_TOKEN_PREFIX + " " + tokenParser.createJWTToken(auth.getName()));
         SecurityContextHolder.getContext().setAuthentication(auth);
+        //continue chain to process request
+        filterChain.doFilter(request, response);
     }
 
     private AccountCredentials retrieveCredentialsFromBasicAuthentication(String authorization) {
